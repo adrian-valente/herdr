@@ -53,6 +53,17 @@ impl HostGeometry {
             grid_cell(y.min(height_px - 1), self.rows, height_px)?,
         ))
     }
+
+    pub(crate) fn cell_center(self, column: u16, row: u16) -> Option<Position> {
+        if column >= self.cols || row >= self.rows {
+            return None;
+        }
+        let width_px = grid_extent(self.cols, self.width_px)?;
+        let height_px = grid_extent(self.rows, self.height_px)?;
+        let x = cell_center(column, self.cols, width_px)?;
+        let y = cell_center(row, self.rows, height_px)?;
+        (self.cell(x, y) == Some((column, row))).then_some(Position::Pixels { x, y })
+    }
 }
 
 impl HostPixels {
@@ -180,6 +191,14 @@ fn grid_cell(pixel: u32, count: u16, extent: u32) -> Option<u16> {
     u16::try_from(cell).ok().filter(|cell| *cell < count)
 }
 
+fn cell_center(index: u16, count: u16, extent: u32) -> Option<u32> {
+    let start = boundary(index, count, extent)?;
+    let end = boundary(index.checked_add(1)?, count, extent)?;
+    start
+        .checked_add(end.checked_sub(start)? / 2)?
+        .checked_add(1)
+}
+
 fn scale(pixel: u32, source: u32, target: u32) -> u32 {
     ((u64::from(pixel) * u64::from(target)) / u64::from(source))
         .min(u64::from(target.saturating_sub(1))) as u32
@@ -254,5 +273,17 @@ mod tests {
         assert_eq!(geometry.cell(800, 480), Some((79, 23)));
         assert_eq!(geometry.cell(801, 1), None);
         assert_eq!(geometry.cell(0, 1), None);
+    }
+
+    #[test]
+    fn geometry_synthesizes_pixel_centers_for_cells() {
+        let geometry = HostGeometry::new(80, 24, 800, 480).unwrap();
+        assert_eq!(
+            geometry.cell_center(4, 6),
+            Some(Position::Pixels { x: 46, y: 131 })
+        );
+        assert_eq!(geometry.cell(46, 131), Some((4, 6)));
+        assert_eq!(geometry.cell_center(80, 6), None);
+        assert_eq!(geometry.cell_center(4, 24), None);
     }
 }
