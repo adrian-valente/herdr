@@ -115,7 +115,11 @@ pub(super) fn clear_endpoint_host_effects(
     } else {
         state.direct_mouse_capture_preference
     };
-    let sgr_pixels = super::effective_sgr_pixel_mouse(enabled, false, state.pixel_geometry_exact);
+    let sgr_pixels = super::effective_sgr_pixel_mouse(
+        enabled,
+        false,
+        host_sgr_pixel_mouse_enabled(state.pixel_geometry_exact),
+    );
     if enabled != state.mouse_capture_active
         || sgr_pixels != host_sgr_pixels_active.load(std::sync::atomic::Ordering::Acquire)
     {
@@ -295,7 +299,7 @@ pub(super) fn begin_endpoint_activation(
         state.reported_size.1,
         state.reported_cell_size.0,
         state.reported_cell_size.1,
-        state.pixel_geometry_exact,
+        host_sgr_pixel_mouse_enabled(state.pixel_geometry_exact),
     );
     match endpoint::PendingEndpointActivation::prepare(
         shell,
@@ -656,7 +660,7 @@ pub(super) fn install_client_shell_snapshot(
                     state.reported_size.1,
                     state.reported_cell_size.0,
                     state.reported_cell_size.1,
-                    state.pixel_geometry_exact,
+                    host_sgr_pixel_mouse_enabled(state.pixel_geometry_exact),
                 )
             }),
             graphics_cleanup,
@@ -702,7 +706,7 @@ pub(super) fn finish_client_shell_input(
             state.reported_size.1,
             state.reported_cell_size.0,
             state.reported_cell_size.1,
-            state.pixel_geometry_exact,
+            host_sgr_pixel_mouse_enabled(state.pixel_geometry_exact),
         );
         if let Some(activation) = pending_activation.as_mut() {
             if let Err(error) = activation.update_resize(resize, endpoints) {
