@@ -91,12 +91,38 @@ pub(super) fn ghostty_mouse_encoder_for_terminal(
     Some(encoder)
 }
 
-pub(super) fn ghostty_mouse_position_for_terminal(
+pub(super) fn ghostty_effective_mouse_position(
+    terminal: &crate::ghostty::Terminal,
     position: crate::input::mouse::Position,
-) -> Option<(f32, f32)> {
+) -> crate::input::mouse::Position {
+    let crate::input::mouse::Position::Cell { column, row } = position else {
+        return position;
+    };
+    if terminal
+        .mode_get(crate::ghostty::MODE_MOUSE_SGR_PIXELS)
+        .ok()
+        != Some(true)
+    {
+        return position;
+    }
+    let synthesized = (|| {
+        let cols = terminal.cols().ok()?;
+        let rows = terminal.rows().ok()?;
+        crate::input::mouse::HostGeometry::new(
+            cols,
+            rows,
+            terminal.width_px().ok()?,
+            terminal.height_px().ok()?,
+        )?
+        .cell_center(column, row)
+    })();
+    synthesized.unwrap_or(position)
+}
+
+pub(super) fn ghostty_mouse_coordinates(position: crate::input::mouse::Position) -> (f32, f32) {
     match position {
-        crate::input::mouse::Position::Pixels { x, y } => Some((x as f32, y as f32)),
-        crate::input::mouse::Position::Cell { column, row } => Some((column as f32, row as f32)),
+        crate::input::mouse::Position::Pixels { x, y } => (x as f32, y as f32),
+        crate::input::mouse::Position::Cell { column, row } => (column as f32, row as f32),
     }
 }
 
