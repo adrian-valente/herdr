@@ -58,7 +58,14 @@ MAX_MATCHER_CHARS = 512
 # version, published sha256). Remove an entry once the bundled manifest ships.
 STAGED_PUBLISHED_MANIFESTS: dict[str, tuple[str, str, str]] = {}
 
-UNPUBLISHED_BUNDLED_MANIFESTS: dict[str, tuple[str, str]] = {}
+# Stable clients cannot identify Vibe until the binary support ships. Keep its
+# first bundled manifest out of the remote catalog until that stable release.
+UNPUBLISHED_BUNDLED_MANIFESTS: dict[str, tuple[str, str]] = {
+    "vibe": (
+        "2026.09.22.1",
+        "546a2c351a0e509a5ddee38f426011bbf9937deb3f976379c82a61789de61fb4",
+    ),
+}
 
 
 def parse_args() -> argparse.Namespace:
