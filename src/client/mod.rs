@@ -85,6 +85,10 @@ fn refresh_host_mouse_capture(enabled: bool, sgr_pixels: bool) {
     }
 }
 
+fn host_sgr_pixel_mouse_enabled(exact_geometry: bool) -> bool {
+    exact_geometry && crate::platform::host_sgr_pixel_mouse_supported()
+}
+
 #[cfg(windows)]
 use terminal_setup::{is_ssh_session, windows_vti_input_backend_enabled};
 #[cfg(test)]
@@ -1222,7 +1226,9 @@ async fn run_client_loop(
                     host_theme_query_pending.fetch_add(1, Ordering::AcqRel);
                     query_host_terminal_theme();
                 }
-                if !pixel_geometry_exact && host_sgr_pixels_active.load(Ordering::Acquire) {
+                if !host_sgr_pixel_mouse_enabled(pixel_geometry_exact)
+                    && host_sgr_pixels_active.load(Ordering::Acquire)
+                {
                     set_mouse_capture(state.mouse_capture_active, false)
                         .map_err(ClientError::ConnectionFailed)?;
                     host_sgr_pixels_active.store(false, Ordering::Release);
@@ -1248,7 +1254,7 @@ async fn run_client_loop(
                         new_rows,
                         cell_width_px,
                         cell_height_px,
-                        pixel_geometry_exact,
+                        host_sgr_pixel_mouse_enabled(pixel_geometry_exact),
                     )
                 } else {
                     ClientMessage::Resize {
@@ -1256,7 +1262,7 @@ async fn run_client_loop(
                         rows: new_rows,
                         cell_width_px,
                         cell_height_px,
-                        pixel_mouse: pixel_geometry_exact,
+                        pixel_mouse: host_sgr_pixel_mouse_enabled(pixel_geometry_exact),
                     }
                 };
                 if let Some(activation) = pending_activation.as_mut() {
@@ -1978,7 +1984,7 @@ async fn run_client_loop(
                         let next_sgr_pixels = effective_sgr_pixel_mouse(
                             enabled,
                             sgr_pixels,
-                            state.pixel_geometry_exact,
+                            host_sgr_pixel_mouse_enabled(state.pixel_geometry_exact),
                         );
                         let mouse_mode_changed = enabled != state.mouse_capture_active
                             || next_sgr_pixels != host_sgr_pixels_active.load(Ordering::Acquire);
